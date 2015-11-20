@@ -58,7 +58,7 @@ public class MetricCenterGpu extends Task {
 
 	//Declaring global variables for list and storing final length of the input set of cordinates
 	int totalLength;
-	ArrayList<Cordinate> cordList;
+	ArrayList<VectorInput> cordList;
 	GpuStructArray<VectorInput> pList;
 	GpuStructArray<VectorResult> rList;
 
@@ -74,8 +74,6 @@ public class MetricCenterGpu extends Task {
 
 	/**
 	 * Task main program.
-	 *
-	 * @throws Exception
 	 */
 	public void main(String[] args) throws Exception {	
 
@@ -88,10 +86,10 @@ public class MetricCenterGpu extends Task {
 				throw new IllegalArgumentException();
 			
 			//set the dynamic array list to read the input file
-			cordList = new ArrayList<Cordinate>();
+			cordList = new ArrayList<VectorInput>();
 			String[] tempArray = null;
 			double x, y;
-			Cordinate tempCord;
+			VectorInput tempCord;
 			//start reading the input file via buffered reader
 			buffReader = new BufferedReader(new FileReader(args[0]));
 			String readLine = buffReader.readLine();
@@ -100,7 +98,7 @@ public class MetricCenterGpu extends Task {
 				tempArray = readLine.split(" ");
 				x = Double.parseDouble(tempArray[0]);
 				y = Double.parseDouble(tempArray[1]);
-				tempCord = new Cordinate(x, y);
+				tempCord = new VectorInput(x, y);
 				cordList.add(tempCord);
 				readLine = buffReader.readLine();
 			}
@@ -119,8 +117,8 @@ public class MetricCenterGpu extends Task {
 
 			//intialize the point list for sending to the gpu kernel
 			for (int i = 0; i < cordList.size(); i++) {
-				pList.item[i] = new VectorInput(cordList.get(i).getxC(),
-						cordList.get(i).getyC());
+				pList.item[i] = new VectorInput(cordList.get(i).getX(),
+						cordList.get(i).getY());
 			}
 
 			//initialize the result list for sending to the gpu kernel
@@ -154,7 +152,11 @@ public class MetricCenterGpu extends Task {
 				System.err.println ("Remember: file path should be entered correctly");
 				System.err.println ("Please check and enter correct arguments. Exception: " + ie);
 			} catch(FileNotFoundException fe){ //catch if the file not present in the given location
-				System.err.println("Error: input file does not exist");
+				System.err.println("File Not Found. Please give the correct input path for file.");
+				System.err.println ("Usage: java MetricCenter running with pj2. Arguments taken: <filePath>");
+				System.err.println ("<filePath> = Path for input file containing cordinates");
+				System.err.println ("Remember: file path should be entered correctly");
+				System.err.println ("Please check and enter correct arguments. Exception: " + fe);
 			} catch (Exception e) { //catch other exception
 				System.err.println ("Usage: java MetricCenter running with pj2. Arguments taken: <filePath>");
 				System.err.println ("<filePath> = Path for input file containing cordinates");
@@ -181,51 +183,49 @@ public class MetricCenterGpu extends Task {
 	/**
 	 * @author Utkarsh
 	 *			Structure for a 2-D vector.
-	 * 
-	 * @throws Exception
 	 */
 	private static class VectorInput extends Struct {
 		//class variables for x and y cordinate
 		public double x;
 		public double y;
 
-		/**
-		 * Construct a new vector.
-		 *
-		 * @param x
-		 * @param y
-		 */
+		// Construct a new vector.
 		public VectorInput(double x, double y) {
 			this.x = x;
 			this.y = y;
 		}
 
-		/**
-		 * @return : Returns the size in bytes of the C struct.
-		 */
+		// Returns the size in bytes of the C struct.
 		public static long sizeof() {
 			return 16;
 		}
 
-		/**
-		*
-		* Write this Java object to the given byte buffer as a C struct.
-		*
-		*@param buf
-		*/
+		// Write this Java object to the given byte buffer as a C struct.
 		public void toStruct(ByteBuffer buf) {
 			buf.putDouble(x);
 			buf.putDouble(y);
 		}
 
-		/**
-		* Read this Java object from the given byte buffer as a C struct.
-		*
-		*@param buf
-		*/
+		// Read this Java object from the given byte buffer as a C struct.
 		public void fromStruct(ByteBuffer buf) {
 			x = buf.getDouble();
 			y = buf.getDouble();
+		}
+
+		public double getX() {
+			return x;
+		}
+
+		public void setX(double x) {
+			this.x = x;
+		}
+
+		public double getY() {
+			return y;
+		}
+
+		public void setY(double y) {
+			this.y = y;
 		}
 	}
 	
@@ -238,10 +238,8 @@ public class MetricCenterGpu extends Task {
 		public double r;
 		public int i;
 
-
+		// Construct a new vector.
 		/**
-		 * Construct a new vector.
-		 *
 		 * @param r
 		 * @param i
 		 */
@@ -250,30 +248,21 @@ public class MetricCenterGpu extends Task {
 			this.i = i;
 		}
 
+		// Returns the size in bytes of the C struct.
 		/**
-		 * @return : Returns the size in bytes of the C struct.
+		 * @return
 		 */
 		public static long sizeof() {
 			return 16;
 		}
 
-		/**
-		*
-		* Write this Java object to the given byte buffer as a C struct.
-		*
-		*@param buf
-		*/
+		// Write this Java object to the given byte buffer as a C struct.
 		public void toStruct(ByteBuffer buf) {
 			buf.putDouble(r);
 			buf.putInt(i);
 		}
 
-		/**
-		*
-		* Read this Java object from the given byte buffer as a C struct.
-		*
-		*@param buf
-		*/
+		// Read this Java object from the given byte buffer as a C struct.
 		public void fromStruct(ByteBuffer buf) {
 			r = buf.getDouble();
 			i = buf.getInt();
@@ -307,7 +296,7 @@ public class MetricCenterGpu extends Task {
 		 * 			point list as taken from the input file
 		 */
 		private static void printOutput(double ansRadius, int ansIndex, GpuStructArray<VectorInput> pList) {
-			System.out.print (ansIndex +" (");
+			System.out.print ((int)ansIndex +" (");
 			System.out.printf ("%.5g", pList.item[ansIndex].x);
 			System.out.print(",");
 			System.out.printf ("%.5g", pList.item[ansIndex].y);
